@@ -3,9 +3,11 @@ import "server-only";
 import { sql } from "drizzle-orm";
 
 import { createClient } from "@/lib/supabase/server";
-import { adminDb, rlsClient } from "./client";
+import { getAdminDb, getRlsClient } from "./client";
 
-type RlsTx = Parameters<Parameters<typeof rlsClient.transaction>[0]>[0];
+type RlsTx = Parameters<
+  Parameters<ReturnType<typeof getRlsClient>["transaction"]>[0]
+>[0];
 
 /**
  * getDb() returns the two ways to reach the database:
@@ -26,9 +28,9 @@ export async function getDb() {
   const role = claims?.role ?? "anon";
 
   return {
-    admin: adminDb,
+    admin: getAdminDb(),
     rls: <T>(run: (tx: RlsTx) => Promise<T>): Promise<T> =>
-      rlsClient.transaction(async (tx) => {
+      getRlsClient().transaction(async (tx) => {
         await tx.execute(sql`
           select
             set_config('request.jwt.claims', ${claims ? JSON.stringify(claims) : ""}, true),
