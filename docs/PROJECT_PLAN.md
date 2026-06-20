@@ -3,7 +3,7 @@
 **Prepared for:** Mark / Perez Ventures Group of Companies (PVGC)
 **Scope:** Order-driven cashflow + expense entry + accounting reports, built to extend cleanly into Meta Ads expense sync and Logistics monitoring.
 **Date:** June 2026
-**Stack verified current as of:** June 2026 (Next.js 16.2.x, React 19.x, Drizzle 7.x).
+**Stack verified current as of:** 2026-06-20 (Next.js 16.2.9, React 19.2.7, Drizzle `drizzle-orm` 0.45.2 / `drizzle-kit` 0.31.10). _Correction: an earlier draft cited "Drizzle 7.x" — no such release exists; the stable line is 0.45 / 0.31. See `docs/PHASE_0_PLAN.md`._
 
 > **Read this first — assumptions.** This plan is built on a set of informed defaults (multi-company, management-grade accounting, orders as a first-class entity, PHP base currency, Drizzle ORM). Each one is listed in **Section 12 – Open Decisions** with my recommendation. Confirm or redirect those and the plan locks in. Nothing below requires a rewrite if you change them — the data model is designed to flex.
 
@@ -42,7 +42,7 @@ Three principles govern every decision: **speed** (server-rendered data, edge-fr
 | **Framework** | **Next.js 16.2.x** (App Router, Server Actions, Cache Components) | Current stable LTS as of June 2026; Turbopack is now the default bundler; Server Actions are mature, so mutations run server-side with no separate API layer to secure. Requires **Node.js 20+**. |
 | **UI runtime** | **React 19.x** | Bundled with Next 16. *Pin to the latest patched release* — a coordinated security release in May 2026 (incl. an RSC advisory) means you should run patched React/Next versions, not whatever was cached. |
 | **Database + Auth + Storage** | **Supabase** (Postgres 15+) | One platform for DB, Auth (sessions), file Storage (receipts), Realtime, Row Level Security, and **Vault** (encrypted secret storage for integration tokens). Pairs natively with Drizzle. |
-| **ORM** | **Drizzle ORM 7.x** *(recommended)* | In 2026 Drizzle overtook Prisma for exactly this profile: Supabase Postgres on Vercel serverless. ~7KB runtime, near-zero cold-start tax, SQL-like control, code-first (schema *is* your TypeScript), and **built-in RLS helpers** — directly relevant to your multi-company + security requirements. |
+| **ORM** | **Drizzle ORM** (`drizzle-orm` 0.45.x + `drizzle-kit` 0.31.x) *(recommended)* | In 2026 Drizzle overtook Prisma for exactly this profile: Supabase Postgres on Vercel serverless. ~7KB runtime, near-zero cold-start tax, SQL-like control, code-first (schema *is* your TypeScript), and **built-in RLS helpers** — directly relevant to your multi-company + security requirements. |
 | **Styling** | **Tailwind CSS v4** + **shadcn/ui** | Clean, modern, business-friendly components you fully own and can theme to teal/charcoal. No heavy component-library lock-in. |
 | **Tables** | **TanStack Table v8** | Your preferred compact, filterable, searchable tables with sorting/pagination/column control. |
 | **Charts / KPIs** | **Recharts** (or **Tremor** for dashboard-native KPI blocks) | Fast, clean KPI cards and trend charts for the cashflow dashboard. |
@@ -260,7 +260,7 @@ Drop this into the repo as `CLAUDE.md` (or `.cursorrules`, or Lovable project in
 
 ## Stack (do not substitute without approval)
 - Next.js 16.2+ (App Router, Server Actions), React 19, Node 20+
-- Supabase (Postgres, Auth, Storage, Vault), Drizzle ORM 7
+- Supabase (Postgres, Auth, Storage, Vault), Drizzle ORM (drizzle-orm 0.45.x)
 - Tailwind v4 + shadcn/ui, TanStack Table, Recharts, Zod
 - Deploy: Vercel. Data: Supabase.
 

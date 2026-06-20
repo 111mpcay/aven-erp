@@ -32,8 +32,9 @@ Settled at Phase 0 kickoff. If a later need arises that these don't cover, **ASK
 ## Stack (do not substitute without approval)
 - **Next.js 16.2+** (App Router, Server Actions, Cache Components), **React 19**, **Node 20+**.
   Pin to the latest **patched** Next/React releases — security patches land often.
+  _Next 16 is a breaking major: see `AGENTS.md` + `node_modules/next/dist/docs/` before writing Next code._
 - **Supabase**: Postgres, Auth, Storage, **Vault** (secret storage), Row Level Security.
-- **Drizzle ORM 7** (+ Drizzle Kit for migrations).
+- **Drizzle ORM** (`drizzle-orm` 0.45.x + **Drizzle Kit** `drizzle-kit` 0.31.x for migrations). _(There is no "Drizzle 7" — the stable line is 0.45 / 0.31; 1.0 is still beta/rc as of 2026-06-20.)_
 - **Tailwind v4** + **shadcn/ui**, **TanStack Table**, **Recharts**, **Zod**.
 - Deploy: **Vercel**. Scheduled jobs: **Vercel Cron** (simple) / **Inngest** (advanced). Rate limit: **Upstash Redis**.
 
