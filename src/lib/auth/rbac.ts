@@ -5,7 +5,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { getDb } from "@/lib/db/rls";
-import { companyMembers } from "@/lib/db/schema";
+import { companies, companyMembers } from "@/lib/db/schema";
 import { createClient } from "@/lib/supabase/server";
 
 export const ROLES = [
@@ -23,9 +23,9 @@ export const ACTIVE_COMPANY_COOKIE = "active_company";
 export async function getAuthUser() {
   const supabase = await createClient();
   const { data, error } = await supabase.auth.getClaims();
-  const sub = data?.claims?.sub as string | undefined;
-  if (error || !sub) return null;
-  return { id: sub };
+  const claims = data?.claims as { sub?: string; email?: string } | undefined;
+  if (error || !claims?.sub) return null;
+  return { id: claims.sub, email: claims.email ?? null };
 }
 
 export async function requireAuth() {
@@ -34,13 +34,25 @@ export async function requireAuth() {
   return user;
 }
 
+export type MyCompany = { id: string; name: string; slug: string; role: Role };
+
 /** Companies the current user belongs to (drives the company switcher). */
-export async function getMemberships() {
+export async function getMyCompanies(): Promise<MyCompany[]> {
   const user = await getAuthUser();
   if (!user) return [];
   const db = await getDb();
   return db.rls((tx) =>
-    tx.select().from(companyMembers).where(eq(companyMembers.userId, user.id)),
+    tx
+      .select({
+        id: companies.id,
+        name: companies.name,
+        slug: companies.slug,
+        role: companyMembers.role,
+      })
+      .from(companyMembers)
+      .innerJoin(companies, eq(companies.id, companyMembers.companyId))
+      .where(eq(companyMembers.userId, user.id))
+      .orderBy(companies.name),
   );
 }
 
