@@ -12,6 +12,7 @@ import {
   getActiveCompanyId,
   getMyCompanies,
   requireAuth,
+  resolveActiveCompany,
 } from "@/lib/auth/rbac";
 
 export default function AppLayout({
@@ -30,16 +31,17 @@ export default function AppLayout({
 
 async function AuthedLayout({ children }: { children: React.ReactNode }) {
   const user = await requireAuth(); // defense in depth (proxy also gates)
-  const [companies, activeCompanyId] = await Promise.all([
+  const [companies, cookieId] = await Promise.all([
     getMyCompanies(),
     getActiveCompanyId(),
   ]);
+  const active = resolveActiveCompany(companies, cookieId);
 
   return (
     <SidebarProvider>
       <AppSidebar
         companies={companies}
-        activeCompanyId={activeCompanyId}
+        activeCompanyId={active?.id ?? null}
         userEmail={user.email ?? ""}
       />
       <SidebarInset>

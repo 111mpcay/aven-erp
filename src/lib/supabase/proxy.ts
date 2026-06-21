@@ -39,7 +39,7 @@ export async function updateSession(request: NextRequest) {
   const isAuthed = Boolean(data?.claims?.sub);
 
   const { pathname } = request.nextUrl;
-  const isAuthRoute = pathname === "/login" || pathname.startsWith("/auth");
+  const isAuthRoute = pathname === "/login" || pathname.startsWith("/auth/");
   const isAppRoute = !isAuthRoute && pathname !== "/";
 
   const redirectTo = (path: string) => {

@@ -8,6 +8,13 @@
       "when": 1781963613220,
       "tag": "0000_smooth_tigra",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1781974152791,
+      "tag": "0001_force_rls",
+      "breakpoints": true
     }
   ]
 }

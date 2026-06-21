@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
@@ -56,38 +56,41 @@ export async function getMyCompanies(): Promise<MyCompany[]> {
   );
 }
 
+/** Raw value of the active-company cookie (may be absent or stale). */
 export async function getActiveCompanyId() {
   const cookieStore = await cookies();
   return cookieStore.get(ACTIVE_COMPANY_COOKIE)?.value ?? null;
 }
 
 /**
+ * The cookie is an OPTIONAL override, not the source of truth: resolve to the
+ * cookie's company only if the user is actually a member, otherwise fall back
+ * to their first company. This keeps the switcher UI, the cookie, and
+ * requireRole() in agreement, and makes a missing/stale cookie degrade
+ * gracefully instead of hard-failing.
+ */
+export function resolveActiveCompany<T extends { id: string }>(
+  list: T[],
+  cookieId: string | null,
+): T | null {
+  return list.find((c) => c.id === cookieId) ?? list[0] ?? null;
+}
+
+/**
  * RBAC gate — the app-layer half of two-layer auth. Call at the top of every
  * sensitive Server Action: it verifies the user has an allowed role in the
- * active company. RLS independently enforces the same boundary at the database,
- * so a missed check here still can't leak another company's data.
+ * (resolved) active company. RLS independently enforces the same boundary at
+ * the database, so a missed check here still can't leak another company's data.
  */
 export async function requireRole(allowed: Role[]) {
   const user = await requireAuth();
-  const companyId = await getActiveCompanyId();
-  if (!companyId) redirect("/dashboard");
+  const list = await getMyCompanies();
+  const cookieId = await getActiveCompanyId();
+  const active = resolveActiveCompany(list, cookieId);
 
-  const db = await getDb();
-  const rows = await db.rls((tx) =>
-    tx
-      .select()
-      .from(companyMembers)
-      .where(
-        and(
-          eq(companyMembers.userId, user.id),
-          eq(companyMembers.companyId, companyId),
-        ),
-      ),
-  );
-
-  const membership = rows[0];
-  if (!membership || !allowed.includes(membership.role as Role)) {
+  if (!active) redirect("/dashboard"); // user belongs to no company
+  if (!allowed.includes(active.role)) {
     throw new Error("Forbidden: insufficient role for this action.");
   }
-  return { userId: user.id, companyId, role: membership.role as Role };
+  return { userId: user.id, companyId: active.id, role: active.role };
 }

@@ -25,7 +25,9 @@ export async function getDb() {
   const supabase = await createClient();
   const { data } = await supabase.auth.getClaims();
   const claims = (data?.claims ?? null) as { sub?: string; role?: string } | null;
-  const role = claims?.role ?? "anon";
+  // Allow-list the role: never let a token claim downgrade us into a BYPASSRLS
+  // role (service_role/postgres). Only 'authenticated' or fail-closed 'anon'.
+  const role = claims?.role === "authenticated" ? "authenticated" : "anon";
 
   return {
     admin: getAdminDb(),
@@ -33,7 +35,7 @@ export async function getDb() {
       getRlsClient().transaction(async (tx) => {
         await tx.execute(sql`
           select
-            set_config('request.jwt.claims', ${claims ? JSON.stringify(claims) : ""}, true),
+            set_config('request.jwt.claims', ${claims ? JSON.stringify(claims) : "{}"}, true),
             set_config('role', ${role}, true)
         `);
         return run(tx);
