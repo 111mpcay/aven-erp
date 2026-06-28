@@ -44,11 +44,16 @@ Runs `0000`–`0003` over `ADMIN_DATABASE_URL`:
 
 ## C. Seed the tenancy spine (Phase 0 data), then Phase 1 defaults
 
-If this is a fresh project, first create the companies + the owner's profile +
-`company_members` rows (Phase 0 §9 decision 4 — Vault Master, Smart Haven,
-Saglit Resorts). That requires real `auth.users` ids; create the owner via
-Supabase Auth, then insert the rows with the **secret key / SQL editor** (admin
-bypasses RLS). Then:
+First make sure the owner exists in Supabase Auth (sign up once in the app or via
+the dashboard). Then bootstrap the companies + owner profile + memberships
+(Vault Master, Smart Haven, Saglit Resorts — Phase 0 §9 decision 4):
+
+```bash
+npm run db:seed:tenancy   # owner = OWNER_EMAIL, or the sole auth user
+```
+
+`scripts/seed-tenancy.ts` is idempotent and grants the owner the `owner` role in
+all three companies. Then seed per-company defaults (cash accounts + categories):
 
 ```bash
 npm run db:seed

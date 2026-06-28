@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
+    "db:seed:tenancy": "tsx scripts/seed-tenancy.ts",
     "db:seed": "tsx scripts/seed-phase1.ts",
     "db:storage": "tsx scripts/db-exec.ts scripts/storage-receipts.sql"
   },
