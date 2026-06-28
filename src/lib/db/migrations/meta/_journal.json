@@ -15,6 +15,20 @@
       "when": 1781974152791,
       "tag": "0001_force_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1782621129469,
+      "tag": "0002_phase1_money_expenses",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1782621131222,
+      "tag": "0003_force_rls_phase1",
+      "breakpoints": true
     }
   ]
 }

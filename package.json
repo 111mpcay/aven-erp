@@ -7,12 +7,16 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "db:seed:tenancy": "tsx scripts/seed-tenancy.ts",
+    "db:seed": "tsx scripts/seed-phase1.ts",
+    "db:storage": "tsx scripts/db-exec.ts scripts/storage-receipts.sql"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",
     "@supabase/ssr": "0.12.0",
     "@supabase/supabase-js": "2.108.2",
+    "@tanstack/react-table": "^8.21.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "drizzle-orm": "0.45.2",
@@ -37,6 +41,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.9",
     "tailwindcss": "^4",
+    "tsx": "^4.22.4",
     "typescript": "^5"
   }
 }

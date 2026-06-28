@@ -1,7 +1,7 @@
 import "server-only";
 
 import { eq } from "drizzle-orm";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { getDb } from "@/lib/db/rls";
@@ -63,6 +63,18 @@ export async function getActiveCompanyId() {
 }
 
 /**
+ * Resolved active company (+ the full membership list) for page reads. Mirrors
+ * the layout's resolution so pages, the switcher, and requireRole() all agree.
+ */
+export async function getActiveCompany() {
+  const [companies, cookieId] = await Promise.all([
+    getMyCompanies(),
+    getActiveCompanyId(),
+  ]);
+  return { companies, active: resolveActiveCompany(companies, cookieId) };
+}
+
+/**
  * The cookie is an OPTIONAL override, not the source of truth: resolve to the
  * cookie's company only if the user is actually a member, otherwise fall back
  * to their first company. This keeps the switcher UI, the cookie, and
@@ -94,3 +106,17 @@ export async function requireRole(allowed: Role[]) {
   }
   return { userId: user.id, companyId: active.id, role: active.role };
 }
+
+/** Best-effort client IP for the audit trail (Vercel sets x-forwarded-for). */
+export async function getClientIp() {
+  const h = await headers();
+  return (
+    h.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    h.get("x-real-ip") ??
+    null
+  );
+}
+
+/** Roles allowed to write expenses / categories / cash accounts (excludes viewer).
+ *  Mirrors the DB write-role RLS policies in lib/db/schema.ts. */
+export const WRITE_ROLES: Role[] = ["owner", "admin", "accountant", "encoder"];

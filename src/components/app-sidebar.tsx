@@ -26,9 +26,9 @@ import {
 const NAV = [
   { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard, enabled: true },
   { title: "Orders", href: "#", icon: ShoppingCart, enabled: false },
-  { title: "Expenses", href: "#", icon: Receipt, enabled: false },
+  { title: "Expenses", href: "/expenses", icon: Receipt, enabled: true },
   { title: "Reports", href: "#", icon: BarChart3, enabled: false },
-  { title: "Settings", href: "#", icon: Settings, enabled: false },
+  { title: "Settings", href: "/settings", icon: Settings, enabled: true },
 ] as const;
 
 export function AppSidebar({
@@ -41,7 +41,7 @@ export function AppSidebar({
   userEmail: string;
 }) {
   return (
-    <Sidebar>
+    <Sidebar collapsible="icon">
       <SidebarHeader>
         <CompanySwitcher companies={companies} activeCompanyId={activeCompanyId} />
       </SidebarHeader>
