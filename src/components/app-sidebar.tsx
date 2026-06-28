@@ -25,7 +25,7 @@ import {
 
 const NAV = [
   { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard, enabled: true },
-  { title: "Orders", href: "#", icon: ShoppingCart, enabled: false },
+  { title: "Orders", href: "/orders", icon: ShoppingCart, enabled: true },
   { title: "Expenses", href: "/expenses", icon: Receipt, enabled: true },
   { title: "Reports", href: "#", icon: BarChart3, enabled: false },
   { title: "Settings", href: "/settings", icon: Settings, enabled: true },
