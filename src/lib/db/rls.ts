@@ -5,7 +5,11 @@ import { sql } from "drizzle-orm";
 import { createClient } from "@/lib/supabase/server";
 import { getAdminDb, getRlsClient } from "./client";
 
-type RlsTx = Parameters<
+/**
+ * The transaction handle passed to rls(fn). Exported so service functions
+ * (lib/ledger, lib/catalog, lib/audit) can type the `tx` they run/audit inside.
+ */
+export type RlsTx = Parameters<
   Parameters<ReturnType<typeof getRlsClient>["transaction"]>[0]
 >[0];
 
