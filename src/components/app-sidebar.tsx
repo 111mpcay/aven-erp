@@ -41,7 +41,7 @@ export function AppSidebar({
   userEmail: string;
 }) {
   return (
-    <Sidebar>
+    <Sidebar collapsible="icon">
       <SidebarHeader>
         <CompanySwitcher companies={companies} activeCompanyId={activeCompanyId} />
       </SidebarHeader>

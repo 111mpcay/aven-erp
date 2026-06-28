@@ -163,6 +163,10 @@ function Sidebar({
   collapsible?: "offcanvas" | "icon" | "none"
 }) {
   const { isMobile, state, openMobile, setOpenMobile } = useSidebar()
+  // When collapsed to an icon rail, hovering (or focusing into) the sidebar
+  // previews the full view as an OVERLAY — the layout gap stays icon-width, so
+  // page content never reflows.
+  const [previewing, setPreviewing] = React.useState(false)
 
   if (collapsible === "none") {
     return (
@@ -205,14 +209,39 @@ function Sidebar({
     )
   }
 
+  const expandOnHover = collapsible === "icon"
+  // Visual state used for the panel + labels (may be expanded by hover preview).
+  const showExpanded = state === "expanded" || (expandOnHover && previewing)
+  // Pin the layout gap to icon width whenever the sidebar is REALLY collapsed,
+  // so a hover preview overlays content instead of pushing it.
+  const iconGapPin = expandOnHover
+    ? variant === "floating" || variant === "inset"
+      ? "group-data-[real-state=collapsed]:w-[calc(var(--sidebar-width-icon)+(--spacing(4)))]"
+      : "group-data-[real-state=collapsed]:w-(--sidebar-width-icon)"
+    : ""
+  const hoverProps = expandOnHover
+    ? {
+        onMouseEnter: () => setPreviewing(true),
+        onMouseLeave: () => setPreviewing(false),
+        onFocusCapture: () => setPreviewing(true),
+        onBlurCapture: (e: React.FocusEvent<HTMLDivElement>) => {
+          if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
+            setPreviewing(false)
+          }
+        },
+      }
+    : {}
+
   return (
     <div
       className="group peer hidden text-sidebar-foreground md:block"
-      data-state={state}
-      data-collapsible={state === "collapsed" ? collapsible : ""}
+      data-state={showExpanded ? "expanded" : "collapsed"}
+      data-collapsible={showExpanded ? "" : collapsible}
+      data-real-state={state}
       data-variant={variant}
       data-side={side}
       data-slot="sidebar"
+      {...hoverProps}
     >
       {/* This is what handles the sidebar gap on desktop */}
       <div
@@ -223,7 +252,8 @@ function Sidebar({
           "group-data-[side=right]:rotate-180",
           variant === "floating" || variant === "inset"
             ? "group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4)))]"
-            : "group-data-[collapsible=icon]:w-(--sidebar-width-icon)"
+            : "group-data-[collapsible=icon]:w-(--sidebar-width-icon)",
+          iconGapPin
         )}
       />
       <div
@@ -235,6 +265,9 @@ function Sidebar({
           variant === "floating" || variant === "inset"
             ? "p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4))+2px)]"
             : "group-data-[collapsible=icon]:w-(--sidebar-width-icon) group-data-[side=left]:border-r group-data-[side=right]:border-l",
+          // Lift the panel above content while previewing on hover (icon rail).
+          expandOnHover &&
+            "group-data-[real-state=collapsed]:group-data-[state=expanded]:shadow-xl",
           className
         )}
         {...props}

@@ -38,7 +38,7 @@ async function AuthedLayout({ children }: { children: React.ReactNode }) {
   const active = resolveActiveCompany(companies, cookieId);
 
   return (
-    <SidebarProvider>
+    <SidebarProvider defaultOpen={false}>
       <AppSidebar
         companies={companies}
         activeCompanyId={active?.id ?? null}
