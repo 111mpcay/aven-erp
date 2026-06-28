@@ -342,3 +342,151 @@ export const auditLog = pgTable(
     }),
   ],
 );
+
+/* ------------------------------------------------------------------ *
+ * Phase 2: orders + order_items (the revenue / inflow stream).
+ *
+ * Orders carry logistics-ready fields (fulfillment_status, courier, …)
+ * nullable from day one so Phase 7 bolts on with no migration. Cashflow
+ * is DERIVED: a paid order's amount_paid (×fx_to_php) attributed to
+ * cash_account_id is the inflow — the dashboard (Phase 3) and posted
+ * ledger_entries (Phase 4) read it later.
+ * ------------------------------------------------------------------ */
+
+export const orderStatus = pgEnum("order_status", [
+  "draft",
+  "confirmed",
+  "cancelled",
+]);
+
+export const paymentStatus = pgEnum("payment_status", [
+  "unpaid",
+  "partial",
+  "paid",
+]);
+
+export const salesChannel = pgEnum("sales_channel", [
+  "shopee",
+  "lazada",
+  "tiktok",
+  "facebook",
+  "website",
+  "walk_in",
+  "other",
+]);
+
+// Nullable until Phase 7 (logistics) — present now so orders never need a rewrite.
+export const orderFulfillmentStatus = pgEnum("order_fulfillment_status", [
+  "pending",
+  "packed",
+  "shipped",
+  "in_transit",
+  "delivered",
+]);
+
+// orders — one row per sale; totals + payment_status are computed server-side
+// in lib/orders, never trusted from the client.
+export const orders = pgTable(
+  "orders",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    companyId: uuid("company_id")
+      .notNull()
+      .references(() => companies.id, { onDelete: "cascade" }),
+    orderNo: text("order_no").notNull(),
+    customerName: text("customer_name"),
+    channel: salesChannel().notNull().default("other"),
+    orderDate: date("order_date").notNull(),
+    status: orderStatus().notNull().default("confirmed"),
+    paymentStatus: paymentStatus().notNull().default("unpaid"),
+    // Where the payment lands — the inflow account (set once paid/partial).
+    cashAccountId: uuid("cash_account_id").references(() => cashAccounts.id, {
+      onDelete: "restrict",
+    }),
+    subtotal: numeric({ precision: 14, scale: 2 }).notNull().default("0"),
+    shippingFee: numeric("shipping_fee", { precision: 14, scale: 2 })
+      .notNull()
+      .default("0"),
+    discount: numeric({ precision: 14, scale: 2 }).notNull().default("0"),
+    total: numeric({ precision: 14, scale: 2 }).notNull().default("0"),
+    amountPaid: numeric("amount_paid", { precision: 14, scale: 2 })
+      .notNull()
+      .default("0"),
+    currency: text().notNull().default("PHP"),
+    fxToPhp: numeric("fx_to_php", { precision: 18, scale: 6 })
+      .notNull()
+      .default("1"),
+    notes: text(),
+    // Logistics-ready (Phase 7), nullable now.
+    fulfillmentStatus: orderFulfillmentStatus("fulfillment_status"),
+    courier: text(),
+    trackingNo: text("tracking_no"),
+    shippedAt: timestamp("shipped_at", { withTimezone: true }),
+    deliveredAt: timestamp("delivered_at", { withTimezone: true }),
+    createdBy: uuid("created_by").references(() => profiles.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [
+    unique("orders_company_order_no_uq").on(t.companyId, t.orderNo),
+    index("orders_company_date_idx").on(t.companyId, t.orderDate),
+    index("orders_company_payment_idx").on(t.companyId, t.paymentStatus),
+    pgPolicy("orders_select_members", {
+      for: "select",
+      to: authenticatedRole,
+      using: memberCompany(t.companyId),
+    }),
+    pgPolicy("orders_write_roles", {
+      for: "all",
+      to: authenticatedRole,
+      using: writeRoleCompany(t.companyId),
+      withCheck: writeRoleCompany(t.companyId),
+    }),
+  ],
+);
+
+// order_items — line items; COGS = sum(qty * unit_cost). RLS scopes through the
+// parent order's company (non-recursive: subquery hits orders + company_members,
+// never order_items).
+export const orderItems = pgTable(
+  "order_items",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    orderId: uuid("order_id")
+      .notNull()
+      .references(() => orders.id, { onDelete: "cascade" }),
+    productName: text("product_name").notNull(),
+    sku: text(),
+    qty: numeric({ precision: 12, scale: 2 }).notNull().default("1"),
+    unitPrice: numeric("unit_price", { precision: 14, scale: 2 })
+      .notNull()
+      .default("0"),
+    unitCost: numeric("unit_cost", { precision: 14, scale: 2 })
+      .notNull()
+      .default("0"),
+    lineTotal: numeric("line_total", { precision: 14, scale: 2 })
+      .notNull()
+      .default("0"),
+  },
+  (t) => [
+    index("order_items_order_idx").on(t.orderId),
+    pgPolicy("order_items_select_members", {
+      for: "select",
+      to: authenticatedRole,
+      using: sql`exists (select 1 from orders o join company_members m on m.company_id = o.company_id where o.id = ${t.orderId} and m.user_id = ${authUid})`,
+    }),
+    pgPolicy("order_items_write_roles", {
+      for: "all",
+      to: authenticatedRole,
+      using: sql`exists (select 1 from orders o join company_members m on m.company_id = o.company_id where o.id = ${t.orderId} and m.user_id = ${authUid} and m.role in ('owner','admin','accountant','encoder'))`,
+      withCheck: sql`exists (select 1 from orders o join company_members m on m.company_id = o.company_id where o.id = ${t.orderId} and m.user_id = ${authUid} and m.role in ('owner','admin','accountant','encoder'))`,
+    }),
+  ],
+);
