@@ -48,7 +48,7 @@ async function AuthedLayout({ children }: { children: React.ReactNode }) {
         <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
           <SidebarTrigger className="-ml-1" />
           <Separator orientation="vertical" className="mr-1 h-5" />
-          <span className="text-sm font-medium">Dashboard</span>
+          <span className="text-sm font-medium">Aven ERP</span>
         </header>
         <main className="flex-1 p-4 md:p-6">{children}</main>
       </SidebarInset>
