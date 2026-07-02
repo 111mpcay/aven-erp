@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { isAiEnabled } from "@/lib/ai";
 import { getActiveCompany, requireAuth, WRITE_ROLES } from "@/lib/auth/rbac";
 import { listCashAccounts, listCategories } from "@/lib/catalog";
 import { listExpenses } from "@/lib/ledger";
@@ -93,6 +94,7 @@ export default async function ExpensesPage({
         accounts={accountOptions}
         canWrite={canWrite}
         canDelete={canDelete}
+        aiEnabled={isAiEnabled()}
       />
 
       {totalPages > 1 && (

@@ -47,12 +47,14 @@ export function ExpensesClient({
   accounts,
   canWrite,
   canDelete,
+  aiEnabled,
 }: {
   rows: ExpenseRowView[];
   categories: CategoryOption[];
   accounts: AccountOption[];
   canWrite: boolean;
   canDelete: boolean;
+  aiEnabled: boolean;
 }) {
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<EditableExpense | null>(null);
@@ -106,6 +108,7 @@ export function ExpensesClient({
         categories={categories}
         accounts={accounts}
         editing={editing}
+        aiEnabled={aiEnabled}
       />
 
       <DeleteExpenseDialog
