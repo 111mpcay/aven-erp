@@ -50,10 +50,15 @@ const centavos = (n: number) => (Math.round(n * 100) / 100).toFixed(2);
 const MAX_RANGE_DAYS = 366;
 const DAY_MS = 86_400_000;
 
-function normalizeRange(range: { from: string; to: string }) {
+export function normalizeRange(range: { from: string; to: string }) {
   let from = isValidIsoDate(range.from) ? range.from : manilaDateDaysAgo(29);
   let to = isValidIsoDate(range.to) ? range.to : manilaDateDaysAgo(0);
   if (from > to) [from, to] = [to, from];
+  // Floor to a sane epoch: derived previous-period math must never produce a
+  // year-0000 date (JS has year 0, Postgres does not → 22008 on ::date).
+  const MIN_DATE = "1900-01-01";
+  if (from < MIN_DATE) from = MIN_DATE;
+  if (to < MIN_DATE) to = MIN_DATE;
   const spanDays = (Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / DAY_MS;
   if (spanDays > MAX_RANGE_DAYS) {
     from = new Date(Date.parse(`${to}T00:00:00Z`) - MAX_RANGE_DAYS * DAY_MS)
