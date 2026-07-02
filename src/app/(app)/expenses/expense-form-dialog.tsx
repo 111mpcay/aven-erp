@@ -1,7 +1,9 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState } from "react";
+import { Sparkles } from "lucide-react";
+import { useActionState, useEffect, useRef, useState, useTransition } from "react";
 
+import { suggestCategoryAction } from "@/app/(app)/ai-actions";
 import { PinPrompt } from "@/components/pin-prompt";
 import { Button } from "@/components/ui/button";
 import {
@@ -41,17 +43,44 @@ export function ExpenseFormDialog({
   categories,
   accounts,
   editing,
+  aiEnabled,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   categories: CategoryOption[];
   accounts: AccountOption[];
   editing: EditableExpense | null;
+  aiEnabled: boolean;
 }) {
   const isEdit = editing !== null;
   const action = isEdit ? updateExpenseAction : createExpenseAction;
   const [state, formAction, pending] = useActionState(action, INITIAL);
   const formRef = useRef<HTMLFormElement>(null);
+  const categoryRef = useRef<HTMLSelectElement>(null);
+  const [aiHint, setAiHint] = useState<string | null>(null);
+  const [suggesting, startSuggest] = useTransition();
+
+  const suggest = () =>
+    startSuggest(async () => {
+      setAiHint(null);
+      const fd = formRef.current ? new FormData(formRef.current) : null;
+      const res = await suggestCategoryAction({
+        vendor: String(fd?.get("vendor") ?? ""),
+        description: String(fd?.get("description") ?? ""),
+        amount: String(fd?.get("amount") ?? ""),
+      });
+      if (res.ok && res.suggestion) {
+        const s = res.suggestion;
+        if (s.categoryId && categoryRef.current) {
+          categoryRef.current.value = s.categoryId;
+          setAiHint(`Suggested: ${s.categoryName} — ${s.reason} (${s.confidence})`);
+        } else {
+          setAiHint(s.reason || "No confident match; pick a category manually.");
+        }
+      } else {
+        setAiHint(res.error ?? "Couldn't suggest a category.");
+      }
+    });
   // Derived, not synced: the PIN prompt is open whenever the LATEST action
   // result demands a PIN and the user hasn't dismissed that exact result.
   const [pinDismissed, setPinDismissed] = useState<ActionResult | null>(null);
@@ -63,6 +92,19 @@ export function ExpenseFormDialog({
   useEffect(() => {
     if (state.ok) onOpenChange(false);
   }, [state, onOpenChange]);
+
+  // Clear any stale AI suggestion when the dialog opens or switches target — the
+  // component instance is reused across create/edit, so aiHint would otherwise
+  // linger and describe a different expense. Reset during render (React's
+  // documented pattern) rather than in an effect: closing drives the key to
+  // "closed", so every reopen changes it and clears the hint. The <select>
+  // self-corrects via the form's `key` remount.
+  const targetKey = open ? (editing?.id ?? "create") : "closed";
+  const [hintTarget, setHintTarget] = useState(targetKey);
+  if (hintTarget !== targetKey) {
+    setHintTarget(targetKey);
+    setAiHint(null);
+  }
 
   const fe = state.fieldErrors ?? {};
 
@@ -106,10 +148,24 @@ export function ExpenseFormDialog({
 
           <div className="grid grid-cols-2 gap-3">
             <div className="grid gap-1.5">
-              <Label htmlFor="categoryId">Category</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="categoryId">Category</Label>
+                {aiEnabled && (
+                  <button
+                    type="button"
+                    onClick={suggest}
+                    disabled={suggesting}
+                    className="inline-flex items-center gap-1 text-xs text-primary hover:underline disabled:opacity-50"
+                  >
+                    <Sparkles className="size-3" />
+                    {suggesting ? "…" : "Suggest"}
+                  </button>
+                )}
+              </div>
               <select
                 id="categoryId"
                 name="categoryId"
+                ref={categoryRef}
                 required
                 defaultValue={editing?.categoryId ?? ""}
                 className={SELECT_CLASS}
@@ -124,6 +180,7 @@ export function ExpenseFormDialog({
                 ))}
               </select>
               {fe.categoryId && <FieldError msg={fe.categoryId} />}
+              {aiHint && <p className="text-xs text-muted-foreground">{aiHint}</p>}
             </div>
 
             <div className="grid gap-1.5">

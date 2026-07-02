@@ -13,10 +13,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { isAiEnabled } from "@/lib/ai";
 import { getActiveCompany, requireAuth } from "@/lib/auth/rbac";
 import { getCashflowSummary } from "@/lib/cashflow";
 import { formatMoney, isValidIsoDate, manilaDateDaysAgo } from "@/lib/format";
 import { CashflowChart } from "./cashflow-chart";
+import { CashflowInsightsCard } from "./cashflow-insights";
 import { DashboardFilters } from "./dashboard-filters";
 import { ExportCsvButton } from "./export-csv-button";
 
@@ -116,6 +118,8 @@ export default async function DashboardPage({
           </Card>
         ))}
       </div>
+
+      {isAiEnabled() && <CashflowInsightsCard from={from} to={to} />}
 
       <Card>
         <CardHeader>
