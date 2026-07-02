@@ -201,6 +201,8 @@ Each domain folder owns its Server Components, Server Actions, and components. S
 
 Each phase is shippable on its own and respects your one-module-at-a-time style. Security is foundational, not bolted on at the end.
 
+> **Delivery status (updated 2026-07-02):** Phases 0–5, 7, and 8 are shipped and merged to `main` (PRs #1–#7). **Phase 6 (Meta Ads) is checkpointed** — it needs an external Meta developer app (App ID/Secret, ad account, OAuth redirect URI) that hasn't been provisioned; all other phases were built around it so it bolts on with no rewrite. Phase 8 shipped an initial slice (expense auto-categorization + cashflow insights); receipt OCR, natural-language queries, and forecasting remain as follow-ons.
+
 ### Phase 0 — Foundations & scaffolding
 **Goal:** a deployed skeleton with auth, the data layer, the design system, and CI/CD.
 **Deliverables:** Next 16 + Tailwind v4 + shadcn/ui scaffold; Supabase project; Drizzle schema for `companies / profiles / company_members`; Supabase Auth login + httpOnly sessions; baseline RLS; teal/charcoal theme + app shell (sidebar nav, company switcher); Vercel deploy + env/secret setup.
