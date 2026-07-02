@@ -452,6 +452,62 @@ export const orders = pgTable(
   ],
 );
 
+/* ------------------------------------------------------------------ *
+ * Phase 4: ledger_entries — the posted-ledger spine from PROJECT_PLAN §5.
+ *
+ * Present in the schema NOW so the §8E "advanced" upgrade (event-driven
+ * posting + materialized views) is non-breaking later. Phase 4 reports
+ * still DERIVE from orders + expenses (§8E safe path — volumes are small);
+ * nothing writes here yet, so there is no dual-source-of-truth risk.
+ * ------------------------------------------------------------------ */
+
+export const ledgerDirection = pgEnum("ledger_direction", ["in", "out"]);
+
+export const ledgerSourceType = pgEnum("ledger_source_type", [
+  "order",
+  "expense",
+  "transfer",
+  "adjustment",
+]);
+
+export const ledgerEntries = pgTable(
+  "ledger_entries",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    companyId: uuid("company_id")
+      .notNull()
+      .references(() => companies.id, { onDelete: "cascade" }),
+    cashAccountId: uuid("cash_account_id").references(() => cashAccounts.id, {
+      onDelete: "restrict",
+    }),
+    entryDate: date("entry_date").notNull(),
+    direction: ledgerDirection().notNull(),
+    amount: numeric({ precision: 14, scale: 2 }).notNull(),
+    sourceType: ledgerSourceType("source_type").notNull(),
+    sourceId: uuid("source_id"),
+    categoryId: uuid("category_id").references(() => categories.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("ledger_entries_company_date_idx").on(t.companyId, t.entryDate),
+    pgPolicy("ledger_entries_select_members", {
+      for: "select",
+      to: authenticatedRole,
+      using: memberCompany(t.companyId),
+    }),
+    pgPolicy("ledger_entries_write_roles", {
+      for: "all",
+      to: authenticatedRole,
+      using: writeRoleCompany(t.companyId),
+      withCheck: writeRoleCompany(t.companyId),
+    }),
+  ],
+);
+
 // order_items — line items; COGS = sum(qty * unit_cost). RLS scopes through the
 // parent order's company (non-recursive: subquery hits orders + company_members,
 // never order_items).
