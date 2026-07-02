@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
+import { hasValidPinToken } from "@/lib/auth/pin";
 import { getClientIp, requireRole, WRITE_ROLES } from "@/lib/auth/rbac";
 import {
   createExpense,
@@ -16,6 +17,17 @@ export type ActionResult = {
   ok: boolean;
   error?: string;
   fieldErrors?: Record<string, string>;
+  /** The action is PIN-gated and no fresh PIN token exists — prompt and retry. */
+  pinRequired?: boolean;
+};
+
+/** PIN threshold for a single expense (CLAUDE.md, confirmed ₱10,000). */
+const PIN_THRESHOLD_PHP = 10_000;
+
+const PIN_GATE: ActionResult = {
+  ok: false,
+  pinRequired: true,
+  error: "This action needs your PIN.",
 };
 
 function firstFieldErrors(
@@ -85,6 +97,12 @@ export async function createExpenseAction(
     return { ok: false, fieldErrors: firstFieldErrors(parsed.error.issues) };
   }
 
+  // PIN gate: large expenses (PHP value over the confirmed threshold).
+  const phpValue = Number(parsed.data.amount) * Number(parsed.data.fxToPhp);
+  if (phpValue > PIN_THRESHOLD_PHP && !(await hasValidPinToken(ctx.userId))) {
+    return PIN_GATE;
+  }
+
   try {
     const file = receiptFile(formData);
     const receiptPath = file ? await uploadReceipt(ctx.companyId, file) : null;
@@ -112,6 +130,9 @@ export async function updateExpenseAction(
     return { ok: false, fieldErrors: firstFieldErrors(parsed.error.issues) };
   }
 
+  // PIN gate: expenses post as approved, so every edit is a posted-record edit.
+  if (!(await hasValidPinToken(ctx.userId))) return PIN_GATE;
+
   try {
     const file = receiptFile(formData);
     // Keep the existing receipt unless a new file replaces it.
@@ -133,9 +154,11 @@ export async function deleteExpenseAction(
   _prev: ActionResult,
   formData: FormData,
 ): Promise<ActionResult> {
-  // Delete is privileged (PIN-gating arrives in Phase 5; for now owner/admin only).
   const ctx = await requireRole(["owner", "admin"]);
   const ip = await getClientIp();
+
+  // PIN gate: deletes are always sensitive.
+  if (!(await hasValidPinToken(ctx.userId))) return PIN_GATE;
 
   const id = String(formData.get("id") ?? "");
   if (!id) return { ok: false, error: "Missing expense id." };

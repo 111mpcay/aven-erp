@@ -1,7 +1,8 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 
+import { PinPrompt } from "@/components/pin-prompt";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -50,6 +51,11 @@ export function ExpenseFormDialog({
   const isEdit = editing !== null;
   const action = isEdit ? updateExpenseAction : createExpenseAction;
   const [state, formAction, pending] = useActionState(action, INITIAL);
+  const formRef = useRef<HTMLFormElement>(null);
+  // Derived, not synced: the PIN prompt is open whenever the LATEST action
+  // result demands a PIN and the user hasn't dismissed that exact result.
+  const [pinDismissed, setPinDismissed] = useState<ActionResult | null>(null);
+  const pinOpen = Boolean(state.pinRequired) && pinDismissed !== state;
 
   // Close on successful save. Depend on the `state` object (a fresh reference on
   // every submit), not `state.ok` — otherwise a 2nd success (ok stays true) would
@@ -73,6 +79,7 @@ export function ExpenseFormDialog({
         {/* key forces a fresh form (and cleared file input) per create/edit target */}
         <form
           key={editing?.id ?? "create"}
+          ref={formRef}
           action={formAction}
           className="grid gap-3"
         >
@@ -230,6 +237,14 @@ export function ExpenseFormDialog({
             </Button>
           </DialogFooter>
         </form>
+
+        <PinPrompt
+          open={pinOpen}
+          onOpenChange={(open) => {
+            if (!open) setPinDismissed(state);
+          }}
+          onVerified={() => formRef.current?.requestSubmit()}
+        />
       </DialogContent>
     </Dialog>
   );

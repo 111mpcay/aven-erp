@@ -1,8 +1,9 @@
 "use client";
 
 import { Pencil, Plus, Trash2 } from "lucide-react";
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 
+import { PinPrompt } from "@/components/pin-prompt";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -245,6 +246,10 @@ function DeleteDialog({
   onOpenChange: (open: boolean) => void;
 }) {
   const [state, formAction, pending] = useActionState(deleteCashAccountAction, INITIAL);
+  const formRef = useRef<HTMLFormElement>(null);
+  // Derived: prompt is open while the latest result demands a PIN, undismissed.
+  const [pinDismissed, setPinDismissed] = useState<ActionResult | null>(null);
+  const pinOpen = Boolean(state.pinRequired) && pinDismissed !== state;
   // Depend on `state` (fresh ref per submit), not `state.ok`, so repeated
   // successes re-fire the effect and close the dialog each time.
   useEffect(() => {
@@ -260,9 +265,9 @@ function DeleteDialog({
             {target ? `"${target.name}" will be removed. Accounts used by expenses can't be deleted.` : ""}
           </DialogDescription>
         </DialogHeader>
-        <form action={formAction}>
+        <form ref={formRef} action={formAction}>
           <input type="hidden" name="id" value={target?.id ?? ""} />
-          {state.error && (
+          {state.error && !state.pinRequired && (
             <p className="mb-2 text-sm text-destructive" role="alert">
               {state.error}
             </p>
@@ -276,6 +281,14 @@ function DeleteDialog({
             </Button>
           </DialogFooter>
         </form>
+
+        <PinPrompt
+          open={pinOpen}
+          onOpenChange={(open) => {
+            if (!open) setPinDismissed(state);
+          }}
+          onVerified={() => formRef.current?.requestSubmit()}
+        />
       </DialogContent>
     </Dialog>
   );

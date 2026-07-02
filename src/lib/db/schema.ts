@@ -3,6 +3,7 @@ import {
   type AnyPgColumn,
   date,
   index,
+  integer,
   jsonb,
   numeric,
   pgEnum,
@@ -76,7 +77,10 @@ export const profiles = pgTable(
   {
     id: uuid().primaryKey(), // == auth.users.id
     fullName: text("full_name"),
-    actionPinHash: text("action_pin_hash"), // nullable until Phase 5 (PIN gating)
+    actionPinHash: text("action_pin_hash"), // scrypt hash (Phase 5 PIN gating)
+    // DB-backed brute-force lockout for PIN attempts (Phase 5).
+    pinAttempts: integer("pin_attempts").notNull().default(0),
+    pinLockedUntil: timestamp("pin_locked_until", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),

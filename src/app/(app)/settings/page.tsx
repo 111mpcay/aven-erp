@@ -1,11 +1,19 @@
+import { ScrollText } from "lucide-react";
+import Link from "next/link";
+
+import { buttonVariants } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { hasPinConfigured } from "@/lib/auth/pin";
 import { getActiveCompany, requireAuth, WRITE_ROLES } from "@/lib/auth/rbac";
 import { listCashAccounts, listCategories } from "@/lib/catalog";
+import { listMembers } from "@/lib/members";
 import { CashAccountsManager } from "./cash-accounts-manager";
 import { CategoriesManager } from "./categories-manager";
+import { SecuritySection } from "./security-section";
+import { TeamManager } from "./team-manager";
 
 export default async function SettingsPage() {
-  await requireAuth();
+  const user = await requireAuth();
   const { active } = await getActiveCompany();
 
   if (!active) {
@@ -19,23 +27,55 @@ export default async function SettingsPage() {
     );
   }
 
-  const [categories, accounts] = await Promise.all([
+  const isAdmin = active.role === "owner" || active.role === "admin";
+  const [categories, accounts, hasPin, members] = await Promise.all([
     listCategories(active.id),
     listCashAccounts(active.id),
+    hasPinConfigured(user.id),
+    isAdmin ? listMembers(active.id) : Promise.resolve([]),
   ]);
 
   const canWrite = WRITE_ROLES.includes(active.role);
-  const canDelete = active.role === "owner" || active.role === "admin";
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
-        <p className="text-sm text-muted-foreground">
-          {active.name} · reference data for expenses. User &amp; role management
-          arrives in Phase 5.
-        </p>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
+          <p className="text-sm text-muted-foreground">
+            {active.name} · reference data, team &amp; security
+          </p>
+        </div>
+        {isAdmin && (
+          <Link
+            href="/settings/audit"
+            className={buttonVariants({ variant: "outline", size: "sm" })}
+          >
+            <ScrollText />
+            Audit log
+          </Link>
+        )}
       </div>
+
+      <SecuritySection hasPin={hasPin} />
+
+      {isAdmin && (
+        <>
+          <Separator />
+          <TeamManager
+            members={members.map((m) => ({
+              userId: m.userId,
+              role: m.role,
+              fullName: m.fullName,
+              email: m.email,
+            }))}
+            currentUserId={user.id}
+            canGrantOwner={active.role === "owner"}
+          />
+        </>
+      )}
+
+      <Separator />
 
       <CashAccountsManager
         accounts={accounts.map((a) => ({
@@ -46,7 +86,7 @@ export default async function SettingsPage() {
           currency: a.currency,
         }))}
         canWrite={canWrite}
-        canDelete={canDelete}
+        canDelete={isAdmin}
       />
 
       <Separator />
@@ -59,7 +99,7 @@ export default async function SettingsPage() {
           code: c.code,
         }))}
         canWrite={canWrite}
-        canDelete={canDelete}
+        canDelete={isAdmin}
       />
     </div>
   );
