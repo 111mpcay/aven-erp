@@ -27,7 +27,7 @@ const NAV = [
   { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard, enabled: true },
   { title: "Orders", href: "/orders", icon: ShoppingCart, enabled: true },
   { title: "Expenses", href: "/expenses", icon: Receipt, enabled: true },
-  { title: "Reports", href: "#", icon: BarChart3, enabled: false },
+  { title: "Reports", href: "/reports", icon: BarChart3, enabled: true },
   { title: "Settings", href: "/settings", icon: Settings, enabled: true },
 ] as const;
 
@@ -41,7 +41,8 @@ export function AppSidebar({
   userEmail: string;
 }) {
   return (
-    <Sidebar collapsible="icon">
+    // print:hidden — the fixed icon rail would repeat on every printed page.
+    <Sidebar collapsible="icon" className="print:hidden">
       <SidebarHeader>
         <CompanySwitcher companies={companies} activeCompanyId={activeCompanyId} />
       </SidebarHeader>
