@@ -71,6 +71,20 @@
       "when": 1782950751576,
       "tag": "0009_member_mgmt_policies",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1782960938590,
+      "tag": "0010_shipments",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1782960940470,
+      "tag": "0011_force_rls_shipments",
+      "breakpoints": true
     }
   ]
 }

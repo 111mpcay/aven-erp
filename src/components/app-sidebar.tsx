@@ -6,6 +6,7 @@ import {
   Receipt,
   Settings,
   ShoppingCart,
+  Truck,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -27,6 +28,7 @@ const NAV = [
   { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard, enabled: true },
   { title: "Orders", href: "/orders", icon: ShoppingCart, enabled: true },
   { title: "Expenses", href: "/expenses", icon: Receipt, enabled: true },
+  { title: "Logistics", href: "/logistics", icon: Truck, enabled: true },
   { title: "Reports", href: "/reports", icon: BarChart3, enabled: true },
   { title: "Settings", href: "/settings", icon: Settings, enabled: true },
 ] as const;

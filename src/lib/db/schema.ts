@@ -474,6 +474,57 @@ export const ledgerSourceType = pgEnum("ledger_source_type", [
   "adjustment",
 ]);
 
+/* ------------------------------------------------------------------ *
+ * Phase 7: shipments — logistics detail for an order. The order's own
+ * fulfillment_status/courier/tracking_no/shipped_at/delivered_at (present
+ * since Phase 2) remain the board-facing summary; this table adds the
+ * shipping COST + a one-row-per-order detail record, kept consistent by
+ * updating both in one transaction. company_id is denormalized (set from
+ * the verified order) so RLS + the board query stay simple and fast.
+ * ------------------------------------------------------------------ */
+export const shipments = pgTable(
+  "shipments",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    companyId: uuid("company_id")
+      .notNull()
+      .references(() => companies.id, { onDelete: "cascade" }),
+    orderId: uuid("order_id")
+      .notNull()
+      .references(() => orders.id, { onDelete: "cascade" })
+      .unique(),
+    status: orderFulfillmentStatus().notNull().default("pending"),
+    courier: text(),
+    trackingNo: text("tracking_no"),
+    cost: numeric({ precision: 14, scale: 2 }).notNull().default("0"),
+    currency: text().notNull().default("PHP"),
+    shippedAt: timestamp("shipped_at", { withTimezone: true }),
+    deliveredAt: timestamp("delivered_at", { withTimezone: true }),
+    notes: text(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [
+    index("shipments_company_status_idx").on(t.companyId, t.status),
+    pgPolicy("shipments_select_members", {
+      for: "select",
+      to: authenticatedRole,
+      using: memberCompany(t.companyId),
+    }),
+    pgPolicy("shipments_write_roles", {
+      for: "all",
+      to: authenticatedRole,
+      using: writeRoleCompany(t.companyId),
+      withCheck: writeRoleCompany(t.companyId),
+    }),
+  ],
+);
+
 export const ledgerEntries = pgTable(
   "ledger_entries",
   {
