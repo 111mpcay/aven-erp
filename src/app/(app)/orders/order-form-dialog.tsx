@@ -1,8 +1,9 @@
 "use client";
 
 import { Plus, Trash2 } from "lucide-react";
-import { useActionState, useEffect, useMemo, useState } from "react";
+import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 
+import { PinPrompt } from "@/components/pin-prompt";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -64,6 +65,10 @@ export function OrderFormDialog({
   const isEdit = editing !== null;
   const action = isEdit ? updateOrderAction : createOrderAction;
   const [state, formAction, pending] = useActionState(action, INITIAL);
+  const formRef = useRef<HTMLFormElement>(null);
+  // Derived: prompt is open while the latest result demands a PIN, undismissed.
+  const [pinDismissed, setPinDismissed] = useState<ActionResult | null>(null);
+  const pinOpen = Boolean(state.pinRequired) && pinDismissed !== state;
 
   const [items, setItems] = useState<EditableItem[]>(
     editing?.items.length ? editing.items : [emptyItem()],
@@ -102,7 +107,7 @@ export function OrderFormDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <form action={formAction} className="grid max-h-[70vh] gap-3 overflow-y-auto pr-1">
+        <form ref={formRef} action={formAction} className="grid max-h-[70vh] gap-3 overflow-y-auto pr-1">
           {isEdit && <input type="hidden" name="id" value={editing.id} />}
           <input type="hidden" name="itemsJson" value={JSON.stringify(items)} />
 
@@ -370,6 +375,14 @@ export function OrderFormDialog({
             </Button>
           </DialogFooter>
         </form>
+
+        <PinPrompt
+          open={pinOpen}
+          onOpenChange={(open) => {
+            if (!open) setPinDismissed(state);
+          }}
+          onVerified={() => formRef.current?.requestSubmit()}
+        />
       </DialogContent>
     </Dialog>
   );

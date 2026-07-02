@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
+import { hasValidPinToken } from "@/lib/auth/pin";
 import { getClientIp, requireRole, WRITE_ROLES } from "@/lib/auth/rbac";
 import {
   createCashAccount,
@@ -24,6 +25,14 @@ export type ActionResult = {
   ok: boolean;
   error?: string;
   fieldErrors?: Record<string, string>;
+  /** The action is PIN-gated and no fresh PIN token exists — prompt and retry. */
+  pinRequired?: boolean;
+};
+
+const PIN_GATE: ActionResult = {
+  ok: false,
+  pinRequired: true,
+  error: "This action needs your PIN.",
 };
 
 function firstFieldErrors(
@@ -102,6 +111,7 @@ export async function deleteCategoryAction(
 ): Promise<ActionResult> {
   const ctx = await requireRole(["owner", "admin"]);
   const ip = await getClientIp();
+  if (!(await hasValidPinToken(ctx.userId))) return PIN_GATE;
   const id = String(formData.get("id") ?? "");
   if (!id) return { ok: false, error: "Missing category id." };
   try {
@@ -174,6 +184,7 @@ export async function deleteCashAccountAction(
 ): Promise<ActionResult> {
   const ctx = await requireRole(["owner", "admin"]);
   const ip = await getClientIp();
+  if (!(await hasValidPinToken(ctx.userId))) return PIN_GATE;
   const id = String(formData.get("id") ?? "");
   if (!id) return { ok: false, error: "Missing account id." };
   try {

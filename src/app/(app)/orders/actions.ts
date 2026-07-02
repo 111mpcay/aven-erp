@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
+import { hasValidPinToken } from "@/lib/auth/pin";
 import { getClientIp, requireRole, WRITE_ROLES } from "@/lib/auth/rbac";
 import {
   createOrder,
@@ -17,6 +18,14 @@ export type ActionResult = {
   ok: boolean;
   error?: string;
   fieldErrors?: Record<string, string>;
+  /** The action is PIN-gated and no fresh PIN token exists — prompt and retry. */
+  pinRequired?: boolean;
+};
+
+const PIN_GATE: ActionResult = {
+  ok: false,
+  pinRequired: true,
+  error: "This action needs your PIN.",
 };
 
 function firstFieldErrors(
@@ -92,6 +101,10 @@ export async function updateOrderAction(
   if (!parsed.success) {
     return { ok: false, fieldErrors: firstFieldErrors(parsed.error.issues) };
   }
+
+  // PIN gate: editing an order is a posted-record edit (most are confirmed).
+  if (!(await hasValidPinToken(ctx.userId))) return PIN_GATE;
+
   try {
     await updateOrder({ ...ctx, ip }, parsed.data.id, parsed.data as OrderWrite);
   } catch (e) {
@@ -107,6 +120,10 @@ export async function deleteOrderAction(
 ): Promise<ActionResult> {
   const ctx = await requireRole(["owner", "admin"]);
   const ip = await getClientIp();
+
+  // PIN gate: deletes are always sensitive.
+  if (!(await hasValidPinToken(ctx.userId))) return PIN_GATE;
+
   const id = String(formData.get("id") ?? "");
   if (!id) return { ok: false, error: "Missing order id." };
   try {

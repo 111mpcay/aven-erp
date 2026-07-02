@@ -57,6 +57,20 @@
       "when": 1782949563710,
       "tag": "0007_force_rls_ledger",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1782950747696,
+      "tag": "0008_pin_lockout",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1782950751576,
+      "tag": "0009_member_mgmt_policies",
+      "breakpoints": true
     }
   ]
 }

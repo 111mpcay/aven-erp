@@ -1,7 +1,9 @@
 import "server-only";
 
-import type { RlsTx } from "@/lib/db/rls";
-import { auditLog } from "@/lib/db/schema";
+import { desc, eq, sql } from "drizzle-orm";
+
+import { getDb, type RlsTx } from "@/lib/db/rls";
+import { auditLog, profiles } from "@/lib/db/schema";
 
 /**
  * Append-only audit trail (CLAUDE.md: no mutation skips the audit log).
@@ -22,6 +24,57 @@ export type AuditMeta = {
   after?: unknown;
   ip?: string | null;
 };
+
+export type AuditRow = {
+  id: string;
+  actorId: string | null;
+  actorName: string | null;
+  action: string;
+  entityType: string;
+  entityId: string | null;
+  ip: string | null;
+  createdAt: Date;
+};
+
+/**
+ * Paginated audit trail for the active company. RLS restricts SELECT on
+ * audit_log to owner/admin; the caller must also requireRole(["owner","admin"]).
+ */
+export async function listAuditLog(
+  companyId: string,
+  page = 1,
+  pageSize = 50,
+): Promise<{ rows: AuditRow[]; total: number; page: number; pageSize: number }> {
+  const safePage = Math.max(1, page);
+  const safeSize = Math.min(200, Math.max(1, pageSize));
+  const db = await getDb();
+  return db.rls(async (tx) => {
+    const rows = await tx
+      .select({
+        id: auditLog.id,
+        actorId: auditLog.actorId,
+        actorName: profiles.fullName,
+        action: auditLog.action,
+        entityType: auditLog.entityType,
+        entityId: auditLog.entityId,
+        ip: auditLog.ip,
+        createdAt: auditLog.createdAt,
+      })
+      .from(auditLog)
+      .leftJoin(profiles, eq(profiles.id, auditLog.actorId))
+      .where(eq(auditLog.companyId, companyId))
+      .orderBy(desc(auditLog.createdAt))
+      .limit(safeSize)
+      .offset((safePage - 1) * safeSize);
+
+    const [{ total }] = await tx
+      .select({ total: sql<number>`count(*)::int` })
+      .from(auditLog)
+      .where(eq(auditLog.companyId, companyId));
+
+    return { rows, total, page: safePage, pageSize: safeSize };
+  });
+}
 
 export async function writeAudit(tx: RlsTx, meta: AuditMeta): Promise<void> {
   const hasDiff = meta.before !== undefined || meta.after !== undefined;

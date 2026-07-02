@@ -10,6 +10,7 @@ import {
   getMyCompanies,
   requireAuth,
 } from "@/lib/auth/rbac";
+import { clearPinToken } from "@/lib/auth/pin";
 import { createClient } from "@/lib/supabase/server";
 
 const CompanyIdSchema = z.string().uuid();
@@ -47,6 +48,7 @@ export async function signOut() {
 
   const cookieStore = await cookies();
   cookieStore.delete(ACTIVE_COMPANY_COOKIE); // don't leak scoping into next session
+  await clearPinToken(); // don't let PIN elevation survive into the next session
 
   revalidatePath("/", "layout");
   redirect("/login");
